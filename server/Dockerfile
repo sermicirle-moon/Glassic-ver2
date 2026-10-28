@@ -2,7 +2,9 @@ FROM node:alpine
 
 WORKDIR /app
 COPY package.json .
-RUN npm install --omit=dev
+RUN npm install
+COPY prisma ./prisma/
+RUN npx prisma generate
 COPY . .
 
 CMD ["npm", "start"]
