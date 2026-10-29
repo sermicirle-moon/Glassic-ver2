@@ -1,10 +1,13 @@
 import express from "express";
-import { body, validationResult } from "express-validator";
+import { body } from "express-validator";
 import type { Request, Response } from "express";
-import { BadRequestError, validateRequest } from '@xen-tickets/common';
-import { Prisma } from "@prisma/client";
+import { validateRequest } from '@xen-tickets/common';
+import { PrismaClient } from '@prisma/client';
+import { Password } from "../../service/password.js";
+import { randomBytes } from 'crypto';
 
 const router = express.Router();
+const prisma = new PrismaClient();
 
 router.post("/api/users/signup", [
     body('username')
@@ -23,12 +26,26 @@ router.post("/api/users/signup", [
         .withMessage('Mật khẩu phải có ít nhất 6 ký tự')
 ], validateRequest, async(req: Request,res: Response)=>{
     const {username, password} = req.body;
+    
+    const hashedPassword = await Password.toHash(password);
+    const userId = randomBytes(8).toString('hex');
 
-    // const existingUser = await 
+    const newUser = await prisma.user.create({
+        data:{
+            userId: userId,
+            username: username,
+            password: hashedPassword
+        },
+        select: {
+            userId: true,
+            username: true,
+            createdAt: true
+        }
+    })
+    
+    console.log(newUser);
 
-    console.log("creating a user");
-
-    res.send({});
+    res.status(201).send(newUser);
 });
 
 export {router as signupRouter}
