@@ -12,6 +12,16 @@ spec:
       labels:
         app: server
     spec:
+      initContainers:
+        - name: run-migration
+          image: xenlulozo/glassic-server
+          command: ["npx", "prisma", "migrate", "deploy"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DATABASE_URL
       containers:
         - name: server
           image: xenlulozo/glassic-server
@@ -21,6 +31,11 @@ spec:
                 secretKeyRef:
                   name: db-secret
                   key: DATABASE_URL
+            - name: JWT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_KEY
 ---
 apiVersion: v1
 kind: Service
