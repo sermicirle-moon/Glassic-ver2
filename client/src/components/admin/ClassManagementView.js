@@ -1,55 +1,239 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import useRequest from '../../hooks/use-request';
+import ClassStudentsPanel from '../common/ClassStudentsPanel';
 
-const initialClasses = [
-  { id: '10A1', name: 'Lớp 10A1 - Toán Tin', grade: 'Khối 10', homeroomTeacher: 'Trần Thị Mai (GV001)', totalStudents: 38, maxStudents: 40, status: 'Hoạt động' },
-  { id: '10A2', name: 'Lớp 10A2 - Khoa học Tự nhiên', grade: 'Khối 10', homeroomTeacher: 'Nguyễn Văn Nam (GV002)', totalStudents: 36, maxStudents: 40, status: 'Hoạt động' },
-  { id: '11A1', name: 'Lớp 11A1 - Toán Lý', grade: 'Khối 11', homeroomTeacher: 'Lê Thu Hà (GV003)', totalStudents: 40, maxStudents: 40, status: 'Hoạt động' },
-  { id: '11B1', name: 'Lớp 11B1 - Xã hội Nhân văn', grade: 'Khối 11', homeroomTeacher: 'Phạm Đức Minh (GV004)', totalStudents: 35, maxStudents: 40, status: 'Hoạt động' },
-  { id: '12A1', name: 'Lớp 12A1 - Ôn thi THPT', grade: 'Khối 12', homeroomTeacher: 'Hoàng Thị Yến (GV005)', totalStudents: 39, maxStudents: 40, status: 'Hoạt động' },
-  { id: '12A2', name: 'Lớp 12A2 - Tiếng Anh', grade: 'Khối 12', homeroomTeacher: 'Vũ Quốc Bảo (GV006)', totalStudents: 32, maxStudents: 40, status: 'Hoạt động' },
-];
+const emptyForm = {
+  classId: '',
+  className: '',
+  grade: 'Khối 10',
+  maxStudents: 40,
+  homeroomTeacherId: '',
+  status: 'Hoạt động'
+};
 
-const ClassManagementView = () => {
-  const [classes, setClasses] = useState(initialClasses);
-  const [filterGrade, setFilterGrade] = useState('ALL');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
+// Form thêm / sửa lớp học. Tách riêng để mỗi lần mở là một form mới (không dính lỗi cũ).
+const ClassForm = ({ editingClass, teachers, onCancel, onSaved }) => {
+  const isEditing = Boolean(editingClass);
 
-  const [newClass, setNewClass] = useState({
-    id: '',
-    name: '',
-    grade: 'Khối 10',
-    homeroomTeacher: '',
-    maxStudents: 40
+  const [formData, setFormData] = useState(
+    isEditing
+      ? {
+          classId: editingClass.classId,
+          className: editingClass.className,
+          grade: editingClass.grade,
+          maxStudents: editingClass.maxStudents,
+          homeroomTeacherId: editingClass.homeroomTeacherId || '',
+          status: editingClass.status
+        }
+      : emptyForm
+  );
+
+  const { doRequest, errors, loading } = useRequest({
+    url: isEditing ? `/api/users/classes/${editingClass.classId}` : '/api/users/classes',
+    method: isEditing ? 'put' : 'post',
+    body: formData,
+    onSuccess: onSaved
   });
 
-  const handleAddClass = (e) => {
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!newClass.id || !newClass.name) return;
+    await doRequest();
+  };
 
-    setClasses([
-      { ...newClass, totalStudents: 0, status: 'Hoạt động' },
-      ...classes
-    ]);
+  return (
+    <div className="card border rounded-1 p-3 bg-white">
+      <div className="fw-semibold small text-dark mb-2">
+        {isEditing ? `Cập Nhật Lớp ${editingClass.classId}` : 'Thêm Lớp Học Mới'}
+      </div>
+      <form onSubmit={handleSubmit}>
+        <div className="row g-2">
+          <div className="col-md-3">
+            <label className="form-label small text-secondary mb-1">Mã lớp *</label>
+            <input
+              required
+              name="classId"
+              value={formData.classId}
+              onChange={handleInputChange}
+              disabled={isEditing}
+              placeholder="VD: 10A3"
+              className="form-control form-control-sm rounded-1"
+            />
+          </div>
+          <div className="col-md-5">
+            <label className="form-label small text-secondary mb-1">Tên lớp học *</label>
+            <input
+              required
+              name="className"
+              value={formData.className}
+              onChange={handleInputChange}
+              placeholder="VD: Lớp 10A3 - Chuyên Hóa"
+              className="form-control form-control-sm rounded-1"
+            />
+          </div>
+          <div className="col-md-2">
+            <label className="form-label small text-secondary mb-1">Khối *</label>
+            <select
+              name="grade"
+              value={formData.grade}
+              onChange={handleInputChange}
+              className="form-select form-select-sm rounded-1"
+            >
+              <option value="Khối 10">Khối 10</option>
+              <option value="Khối 11">Khối 11</option>
+              <option value="Khối 12">Khối 12</option>
+            </select>
+          </div>
+          <div className="col-md-2">
+            <label className="form-label small text-secondary mb-1">Sĩ số tối đa *</label>
+            <input
+              required
+              type="number"
+              min="1"
+              max="100"
+              name="maxStudents"
+              value={formData.maxStudents}
+              onChange={handleInputChange}
+              className="form-control form-control-sm rounded-1"
+            />
+          </div>
 
-    setNewClass({
-      id: '',
-      name: '',
-      grade: 'Khối 10',
-      homeroomTeacher: '',
-      maxStudents: 40
-    });
-    setShowAddForm(false);
+          <div className="col-md-6">
+            <label className="form-label small text-secondary mb-1">Giáo viên chủ nhiệm</label>
+            <select
+              name="homeroomTeacherId"
+              value={formData.homeroomTeacherId}
+              onChange={handleInputChange}
+              className="form-select form-select-sm rounded-1"
+            >
+              <option value="">Chưa gán</option>
+              {teachers.map((t) => (
+                <option key={t.teacherId} value={t.teacherId}>
+                  {t.teacherName} ({t.teacherId})
+                </option>
+              ))}
+            </select>
+          </div>
+          {isEditing && (
+            <div className="col-md-3">
+              <label className="form-label small text-secondary mb-1">Trạng thái</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleInputChange}
+                className="form-select form-select-sm rounded-1"
+              >
+                <option value="Hoạt động">Hoạt động</option>
+                <option value="Tạm ngưng">Tạm ngưng</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        {errors}
+
+        <div className="d-flex justify-content-end gap-2 mt-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="btn btn-outline-secondary btn-sm rounded-1 px-3"
+          >
+            Hủy
+          </button>
+          <button type="submit" disabled={loading} className="btn btn-dark btn-sm rounded-1 px-3">
+            {loading ? 'Đang lưu...' : isEditing ? 'Cập nhật lớp học' : 'Lưu lớp học'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+const ClassManagementView = () => {
+  const [classes, setClasses] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterGrade, setFilterGrade] = useState('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingClass, setEditingClass] = useState(null);
+  const [selectedClassId, setSelectedClassId] = useState(null);
+  const [actionError, setActionError] = useState('');
+
+  const fetchClasses = async () => {
+    try {
+      const { data } = await axios.get('/api/users/classes');
+      setClasses(data);
+    } catch (err) {
+      console.error('Lỗi tải danh sách lớp học:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTeachers = async () => {
+    try {
+      const { data } = await axios.get('/api/users/teachers');
+      setTeachers(data);
+    } catch (err) {
+      console.error('Lỗi tải danh sách giáo viên:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchClasses();
+    fetchTeachers();
+  }, []);
+
+  const openCreateForm = () => {
+    setEditingClass(null);
+    setShowForm(true);
+  };
+
+  const openEditForm = (c) => {
+    setEditingClass(c);
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingClass(null);
+  };
+
+  const handleSaved = () => {
+    closeForm();
+    fetchClasses();
+  };
+
+  const handleDelete = async (c) => {
+    if (!window.confirm(`Xóa lớp ${c.classId} - ${c.className}?`)) return;
+    try {
+      setActionError('');
+      await axios.delete(`/api/users/classes/${c.classId}`);
+      if (selectedClassId === c.classId) setSelectedClassId(null);
+      fetchClasses();
+    } catch (err) {
+      setActionError(
+        err.response?.data?.errors?.[0]?.message || 'Có lỗi xảy ra, vui lòng thử lại sau.'
+      );
+    }
   };
 
   const filteredClasses = classes.filter((c) => {
+    const term = searchTerm.toLowerCase();
     const matchGrade = filterGrade === 'ALL' || c.grade === filterGrade;
     const matchSearch =
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.homeroomTeacher.toLowerCase().includes(searchTerm.toLowerCase());
+      c.className.toLowerCase().includes(term) ||
+      c.classId.toLowerCase().includes(term) ||
+      (c.homeroomTeacher?.teacherName || '').toLowerCase().includes(term);
     return matchGrade && matchSearch;
   });
+
+  const selectedClass = classes.find((c) => c.classId === selectedClassId) || null;
 
   return (
     <div className="d-flex flex-column gap-3">
@@ -59,75 +243,36 @@ const ClassManagementView = () => {
           <h5 className="fw-bold text-dark mb-0">Quản Lý Lớp Học</h5>
           <small className="text-secondary">Danh sách các lớp học và phân công giáo viên chủ nhiệm</small>
         </div>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="btn btn-dark btn-sm rounded-1 px-3"
-        >
-          {showAddForm ? 'Đóng' : '+ Thêm lớp học'}
-        </button>
+        <div className="d-flex gap-2">
+          <button
+            onClick={fetchClasses}
+            className="btn btn-outline-secondary btn-sm rounded-1 px-3"
+          >
+            Làm mới
+          </button>
+          <button
+            onClick={showForm ? closeForm : openCreateForm}
+            className="btn btn-dark btn-sm rounded-1 px-3"
+          >
+            {showForm ? 'Đóng' : '+ Thêm lớp học'}
+          </button>
+        </div>
       </div>
 
-      {/* Form thêm mới */}
-      {showAddForm && (
-        <div className="card border rounded-1 p-3 bg-white">
-          <div className="fw-semibold small text-dark mb-2">Thêm Lớp Học Mới</div>
-          <form onSubmit={handleAddClass}>
-            <div className="row g-2">
-              <div className="col-md-3">
-                <label className="form-label small text-secondary mb-1">Mã lớp</label>
-                <input
-                  required
-                  placeholder="VD: 10A3"
-                  className="form-control form-control-sm rounded-1"
-                  value={newClass.id}
-                  onChange={(e) => setNewClass({ ...newClass, id: e.target.value })}
-                />
-              </div>
-              <div className="col-md-4">
-                <label className="form-label small text-secondary mb-1">Tên lớp học</label>
-                <input
-                  required
-                  placeholder="VD: Lớp 10A3 - Chuyên Hóa"
-                  className="form-control form-control-sm rounded-1"
-                  value={newClass.name}
-                  onChange={(e) => setNewClass({ ...newClass, name: e.target.value })}
-                />
-              </div>
-              <div className="col-md-2">
-                <label className="form-label small text-secondary mb-1">Khối</label>
-                <select
-                  className="form-select form-select-sm rounded-1"
-                  value={newClass.grade}
-                  onChange={(e) => setNewClass({ ...newClass, grade: e.target.value })}
-                >
-                  <option value="Khối 10">Khối 10</option>
-                  <option value="Khối 11">Khối 11</option>
-                  <option value="Khối 12">Khối 12</option>
-                </select>
-              </div>
-              <div className="col-md-3">
-                <label className="form-label small text-secondary mb-1">Giáo viên chủ nhiệm</label>
-                <input
-                  placeholder="Họ tên GV (Mã GV)"
-                  className="form-control form-control-sm rounded-1"
-                  value={newClass.homeroomTeacher}
-                  onChange={(e) => setNewClass({ ...newClass, homeroomTeacher: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="d-flex justify-content-end gap-2 mt-3">
-              <button
-                type="button"
-                onClick={() => setShowAddForm(false)}
-                className="btn btn-outline-secondary btn-sm rounded-1 px-3"
-              >
-                Hủy
-              </button>
-              <button type="submit" className="btn btn-dark btn-sm rounded-1 px-3">
-                Lưu lớp học
-              </button>
-            </div>
-          </form>
+      {/* Form thêm / sửa */}
+      {showForm && (
+        <ClassForm
+          key={editingClass ? editingClass.classId : 'new'}
+          editingClass={editingClass}
+          teachers={teachers}
+          onCancel={closeForm}
+          onSaved={handleSaved}
+        />
+      )}
+
+      {actionError && (
+        <div className="alert alert-danger rounded-1 border small mb-0" role="alert">
+          {actionError}
         </div>
       )}
 
@@ -173,33 +318,71 @@ const ClassManagementView = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredClasses.length === 0 ? (
+            {loading ? (
               <tr>
                 <td colSpan="7" className="text-center py-4 text-muted">
-                  Không tìm thấy lớp học nào.
+                  Đang tải danh sách...
+                </td>
+              </tr>
+            ) : filteredClasses.length === 0 ? (
+              <tr>
+                <td colSpan="7" className="text-center py-4 text-muted">
+                  {classes.length === 0 ? 'Chưa có lớp học nào.' : 'Không tìm thấy lớp học nào.'}
                 </td>
               </tr>
             ) : (
               filteredClasses.map((c) => (
-                <tr key={c.id}>
-                  <td className="ps-3 fw-semibold text-dark font-monospace">{c.id}</td>
-                  <td>{c.name}</td>
+                <tr key={c.classId}>
+                  <td className="ps-3 fw-semibold text-dark font-monospace">{c.classId}</td>
+                  <td>{c.className}</td>
                   <td>
                     <span className="badge text-bg-light border rounded-1 fw-normal text-secondary">
                       {c.grade}
                     </span>
                   </td>
-                  <td>{c.homeroomTeacher || <span className="text-muted">Chưa gán</span>}</td>
-                  <td>{c.totalStudents} / {c.maxStudents}</td>
                   <td>
-                    <span className="text-success small fw-semibold">
+                    {c.homeroomTeacher ? (
+                      `${c.homeroomTeacher.teacherName} (${c.homeroomTeacher.teacherId})`
+                    ) : (
+                      <span className="text-muted">Chưa gán</span>
+                    )}
+                  </td>
+                  <td>
+                    {c.totalStudents} / {c.maxStudents}
+                  </td>
+                  <td>
+                    <span
+                      className={`small fw-semibold ${
+                        c.status === 'Hoạt động' ? 'text-success' : 'text-secondary'
+                      }`}
+                    >
                       {c.status}
                     </span>
                   </td>
                   <td className="text-end pe-3">
-                    <button className="btn btn-outline-secondary btn-sm rounded-1 py-0 px-2" style={{ fontSize: '12px' }}>
-                      Chi tiết
-                    </button>
+                    <div className="d-flex justify-content-end gap-1">
+                      <button
+                        onClick={() => setSelectedClassId(c.classId)}
+                        className="btn btn-outline-secondary btn-sm rounded-1 py-0 px-2"
+                        style={{ fontSize: '12px' }}
+                      >
+                        Chi tiết
+                      </button>
+                      <button
+                        onClick={() => openEditForm(c)}
+                        className="btn btn-outline-secondary btn-sm rounded-1 py-0 px-2"
+                        style={{ fontSize: '12px' }}
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c)}
+                        className="btn btn-outline-danger btn-sm rounded-1 py-0 px-2"
+                        style={{ fontSize: '12px' }}
+                      >
+                        Xóa
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -207,6 +390,17 @@ const ClassManagementView = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Chi tiết lớp: danh sách và xếp học sinh */}
+      {selectedClass && (
+        <ClassStudentsPanel
+          key={selectedClass.classId}
+          classInfo={selectedClass}
+          canManage={true}
+          onClose={() => setSelectedClassId(null)}
+          onChanged={fetchClasses}
+        />
+      )}
     </div>
   );
 };

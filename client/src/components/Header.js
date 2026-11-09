@@ -7,6 +7,7 @@ export default ({ currentUser }) => {
     currentUser && currentUser.role === 'ADMIN' && { label: 'Lớp học', href: '/?tab=classes' },
     currentUser && currentUser.role === 'ADMIN' && { label: 'Giáo viên', href: '/?tab=teachers' },
     currentUser && currentUser.role === 'ADMIN' && { label: 'Học sinh', href: '/?tab=students' },
+    currentUser && currentUser.role === 'TEACHER' && { label: 'Lớp của tôi', href: '/' },
     currentUser && { label: 'Đăng xuất', href: '/auth/signout' },
   ]
     .filter((linkConfig) => linkConfig)
