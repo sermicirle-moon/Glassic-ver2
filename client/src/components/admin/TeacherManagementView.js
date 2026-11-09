@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import useRequest from '../../hooks/use-request';
@@ -7,6 +8,7 @@ const TeacherManagementView = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingTeacherId, setEditingTeacherId] = useState(null);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -19,6 +21,15 @@ const TeacherManagementView = () => {
     gender: 'Nam',
     address: ''
   });
+
+  const resetForm = () => {
+    setFormData({
+      username: '', password: '', teacherId: '', teacherName: '', 
+      email: '', phoneNumber: '', dateOfBirth: '', gender: 'Nam', address: ''
+    });
+    setEditingTeacherId(null);
+    setShowAddForm(false);
+  };
 
   const fetchTeachers = async () => {
     try {
@@ -41,18 +52,7 @@ const TeacherManagementView = () => {
     method: 'post',
     body: formData,
     onSuccess: () => {
-      setShowAddForm(false);
-      setFormData({
-        username: '',
-        password: '',
-        teacherId: '',
-        teacherName: '',
-        email: '',
-        phoneNumber: '',
-        dateOfBirth: '',
-        gender: 'Nam',
-        address: ''
-      });
+      resetForm();
       fetchTeachers();
     }
   });
@@ -63,20 +63,68 @@ const TeacherManagementView = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await doRequest();
+    
+    if (editingTeacherId) {
+      try {
+        const updatePayload = {
+          teacherName: formData.teacherName,
+          email: formData.email,
+          phoneNumber: formData.phoneNumber,
+          gender: formData.gender,
+          dateOfBirth: formData.dateOfBirth,
+          address: formData.address
+        };
+        await axios.put(`/api/users/teachers/${editingTeacherId}`, updatePayload);
+        alert('Cập nhật thông tin thành công!');
+        resetForm();
+        fetchTeachers();
+      } catch (err) {
+        alert('Lỗi cập nhật: ' + (err.response?.data?.errors?.[0]?.message || 'Lỗi hệ thống'));
+      }
+    } else {
+      await doRequest();
+    }
+  };
+
+  const handleEditClick = (teacher) => {
+    setFormData({
+      username: teacher.username || (teacher.user && teacher.user.username) || '',
+      password: '',
+      teacherId: teacher.teacherId,
+      teacherName: teacher.teacherName || teacher.name || '',
+      email: teacher.email || '',
+      phoneNumber: teacher.phoneNumber || teacher.phone || '',
+      dateOfBirth: teacher.dateOfBirth || teacher.dob || '',
+      gender: teacher.gender || 'Nam',
+      address: teacher.address || ''
+    });
+    setEditingTeacherId(teacher.teacherId);
+    setShowAddForm(true);
+  };
+
+  const handleDeleteClick = async (teacherId) => {
+    if (!window.confirm(`Xác nhận xóa tài khoản và hồ sơ của giáo viên mã [${teacherId}]? Hành động này không thể hoàn tác.`)) {
+      return;
+    }
+    try {
+      await axios.delete(`/api/users/teachers/${teacherId}`);
+      alert('Đã xóa giáo viên thành công!');
+      fetchTeachers();
+    } catch (err) {
+      alert('Lỗi khi xóa: ' + (err.response?.data?.errors?.[0]?.message || 'Lỗi hệ thống'));
+    }
   };
 
   const filteredTeachers = teachers.filter((t) => {
     const term = searchTerm.toLowerCase();
     return (
-      t.teacherName?.toLowerCase().includes(term) ||
+      (t.teacherName || t.name)?.toLowerCase().includes(term) ||
       t.teacherId?.toLowerCase().includes(term) ||
       t.email?.toLowerCase().includes(term) ||
-      t.phoneNumber?.includes(term)
+      (t.phoneNumber || t.phone)?.includes(term)
     );
   });
-
-  return (
+return (
     <div className="d-flex flex-column gap-3">
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center pb-2 border-bottom">
@@ -92,27 +140,33 @@ const TeacherManagementView = () => {
             Làm mới
           </button>
           <button
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => {
+              if (showAddForm) resetForm(); 
+              else setShowAddForm(true); 
+            }}
             className="btn btn-dark btn-sm rounded-1 px-3"
           >
-            {showAddForm ? 'Đóng' : '+ Thêm giáo viên'}
+            {showAddForm ? 'Đóng form' : '+ Thêm giáo viên'}
           </button>
         </div>
       </div>
 
-      {/* Form thêm mới giáo viên */}
+      {/* Form thêm mới / cập nhật giáo viên */}
       {showAddForm && (
-        <div className="card border rounded-1 p-3 bg-white">
-          <div className="fw-semibold small text-dark mb-2">Thêm Hồ Sơ Giáo Viên Mới</div>
+        <div className="card border rounded-1 p-3 bg-white shadow-sm">
+          <div className="fw-bold small text-dark mb-3">
+            {editingTeacherId ? `Sửa Hồ Sơ Giáo Viên: ${editingTeacherId}` : 'Thêm Hồ Sơ Giáo Viên Mới'}
+          </div>
           <form onSubmit={handleSubmit}>
             <div className="row g-2">
               <div className="col-md-3">
-                <label className="form-label small text-secondary mb-1">Mã Giáo viên (teacherId) *</label>
+                <label className="form-label small text-secondary mb-1">Mã Giáo viên *</label>
                 <input
                   required
                   name="teacherId"
                   value={formData.teacherId}
                   onChange={handleInputChange}
+                  disabled={!!editingTeacherId} // KHÓA KHI ĐANG SỬA
                   placeholder="VD: GV001"
                   className="form-control form-control-sm rounded-1"
                 />
@@ -128,30 +182,37 @@ const TeacherManagementView = () => {
                   className="form-control form-control-sm rounded-1"
                 />
               </div>
+              
+              {/* Luôn hiển thị Username và Password */}
               <div className="col-md-4">
-                <label className="form-label small text-secondary mb-1">Tên đăng nhập (Username) *</label>
+                <label className="form-label small text-secondary mb-1">Tên đăng nhập *</label>
                 <input
                   required
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
+                  disabled={!!editingTeacherId} // KHÓA KHI ĐANG SỬA
                   placeholder="VD: gv_tranthimai"
                   className="form-control form-control-sm rounded-1"
                 />
               </div>
+              {/* 👇 Ô Password CHỈ HIỂN THỊ KHI THÊM MỚI (Ẩn hoàn toàn khi Sửa) */}
+              {!editingTeacherId && (
+                <div className="col-md-4">
+                  <label className="form-label small text-secondary mb-1">Mật khẩu ban đầu *</label>
+                  <input
+                    required
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="Tối thiểu 6 ký tự"
+                    className="form-control form-control-sm rounded-1"
+                  />
+                </div>
+              )}
+              
 
-              <div className="col-md-4">
-                <label className="form-label small text-secondary mb-1">Mật khẩu ban đầu *</label>
-                <input
-                  required
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="Tối thiểu 6 ký tự"
-                  className="form-control form-control-sm rounded-1"
-                />
-              </div>
               <div className="col-md-4">
                 <label className="form-label small text-secondary mb-1">Email công vụ *</label>
                 <input
@@ -213,12 +274,13 @@ const TeacherManagementView = () => {
               </div>
             </div>
 
+            {/* Hiển thị lỗi */}
             {errors}
 
             <div className="d-flex justify-content-end gap-2 mt-3">
               <button
                 type="button"
-                onClick={() => setShowAddForm(false)}
+                onClick={resetForm}
                 className="btn btn-outline-secondary btn-sm rounded-1 px-3"
               >
                 Hủy
@@ -228,7 +290,7 @@ const TeacherManagementView = () => {
                 disabled={submitting}
                 className="btn btn-dark btn-sm rounded-1 px-3"
               >
-                {submitting ? 'Đang lưu...' : 'Lưu giáo viên'}
+                {submitting ? 'Đang xử lý...' : (editingTeacherId ? 'Cập nhật' : 'Lưu giáo viên')}
               </button>
             </div>
           </form>
@@ -258,7 +320,7 @@ const TeacherManagementView = () => {
               <th className="py-2">GIỚI TÍNH</th>
               <th className="py-2">NGÀY SINH</th>
               <th className="py-2">USERID</th>
-              <th className="py-2 text-end pe-3">THAO TÁC</th>
+              <th className="py-2 text-center pe-3">THAO TÁC</th>
             </tr>
           </thead>
           <tbody>
@@ -278,18 +340,34 @@ const TeacherManagementView = () => {
               filteredTeachers.map((t) => (
                 <tr key={t.teacherId}>
                   <td className="ps-3 fw-semibold text-dark font-monospace">{t.teacherId}</td>
-                  <td className="fw-semibold text-dark">{t.teacherName}</td>
+                  <td className="fw-semibold text-dark">{t.teacherName || t.name}</td>
                   <td className="text-secondary">{t.email}</td>
-                  <td>{t.phoneNumber}</td>
+                  <td>{t.phoneNumber || t.phone}</td>
                   <td>{t.gender}</td>
-                  <td className="text-secondary">{t.dateOfBirth}</td>
+                  <td className="text-secondary">{t.dateOfBirth || t.dob}</td>
                   <td>
                     <code className="text-dark bg-light px-1 border rounded-1 small">{t.userId}</code>
                   </td>
                   <td className="text-end pe-3">
-                    <button className="btn btn-outline-secondary btn-sm rounded-1 py-0 px-2" style={{ fontSize: '12px' }}>
-                      Chi tiết
-                    </button>
+                    <div className="d-flex gap-1 justify-content-end">
+                      <button className="btn btn-outline-secondary btn-sm rounded-1 py-0 px-2" style={{ fontSize: '12px' }}>
+                        Chi tiết
+                      </button>
+                      <button 
+                        onClick={() => handleEditClick(t)}
+                        className="btn btn-outline-primary btn-sm rounded-1 py-0 px-2" 
+                        style={{ fontSize: '12px' }}
+                      >
+                        Sửa
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteClick(t.teacherId)}
+                        className="btn btn-outline-danger btn-sm rounded-1 py-0 px-2" 
+                        style={{ fontSize: '12px' }}
+                      >
+                        Xóa
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
