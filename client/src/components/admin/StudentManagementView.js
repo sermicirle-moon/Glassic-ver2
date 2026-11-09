@@ -76,6 +76,20 @@ const StudentManagementView = () => {
     );
   });
 
+  const handleDeleteClick = async (studentId) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa học sinh ${studentId}?`)) {
+      return;
+    }
+    try {
+      await axios.delete(`/api/users/students/${studentId}`);
+      alert('Đã xóa học sinh thành công!'); 
+      fetchStudents();
+    } catch (err) {
+      alert('Lỗi khi xóa: ' + (err.response?.data?.errors?.[0]?.message || 'Lỗi hệ thống'));
+      console.error('Lỗi chi tiết:', err);
+    }
+  }
+
   return (
     <div className="d-flex flex-column gap-3">
       {/* Header */}
@@ -287,9 +301,18 @@ const StudentManagementView = () => {
                     <code className="text-dark bg-light px-1 border rounded-1 small">{s.userId}</code>
                   </td>
                   <td className="text-end pe-3">
-                    <button className="btn btn-outline-secondary btn-sm rounded-1 py-0 px-2" style={{ fontSize: '12px' }}>
-                      Chi tiết
-                    </button>
+                    <div className="d-flex gap-1 justify-content-end">
+                      <button className="btn btn-outline-secondary btn-sm rounded-1 py-0 px-2" style={{ fontSize: '12px' }}>
+                        Chi tiết
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteClick(s.studentId)}
+                        className="btn btn-outline-danger btn-sm rounded-1 py-0 px-2" 
+                        style={{ fontSize: '12px' }}
+                      >
+                        Xóa
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
