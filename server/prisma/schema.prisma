@@ -19,15 +19,16 @@ model User {
 }
 
 model Teacher {
-  teacherId   String   @id
-  teacherName String
-  dateOfBirth String
-  phoneNumber String
-  email       String
-  gender      String
-  address     String
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [userId])
+  teacherId       String   @id
+  teacherName     String
+  dateOfBirth     String
+  phoneNumber     String
+  email           String
+  gender          String
+  address         String
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [userId])
+  homeroomClasses Class[]
 }
 
 model Student {
@@ -40,4 +41,18 @@ model Student {
   address     String
   userId      String   @unique
   user        User     @relation(fields: [userId], references: [userId])
+  classId     String?
+  class       Class?   @relation(fields: [classId], references: [classId])
+}
+
+model Class {
+  classId           String    @id
+  className         String
+  grade             String
+  maxStudents       Int       @default(40)
+  status            String    @default("Hoạt động")
+  createdAt         DateTime  @default(now())
+  homeroomTeacherId String?
+  homeroomTeacher   Teacher?  @relation(fields: [homeroomTeacherId], references: [teacherId])
+  students          Student[]
 }

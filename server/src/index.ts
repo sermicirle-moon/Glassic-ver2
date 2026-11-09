@@ -10,6 +10,7 @@ import { signoutRouter } from "./routes/auth/signout.js";
 import { currentUserRouter } from "./routes/auth/current-user.js";
 import { teacherManagementRouter } from "./routes/teacher-management/index.js";
 import { studentManagementRouter } from "./routes/student-management/index.js";
+import { classManagementRouter } from "./routes/class-management/index.js";
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use(currentUserRouter);
 // Đăng ký các routes quản lý
 app.use(teacherManagementRouter);
 app.use(studentManagementRouter);
+app.use(classManagementRouter);
 
 app.all('*', async (req, res) => {
     throw new NotFoundError();

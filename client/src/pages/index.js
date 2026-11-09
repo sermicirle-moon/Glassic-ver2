@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import AdminDashboard from '../components/admin/AdminDashboard';
+import TeacherDashboard from '../components/teacher/TeacherDashboard';
 
 const LandingPage = ({ currentUser }) => {
   // 1. Trường hợp CHƯA ĐĂNG NHẬP
@@ -56,7 +57,12 @@ const LandingPage = ({ currentUser }) => {
     return <AdminDashboard currentUser={currentUser} />;
   }
 
-  // 3. MÀN HÌNH CHÍNH DÀNH CHO GIÁO VIÊN HOẶC HỌC SINH
+  // 3. MÀN HÌNH CHÍNH DÀNH CHO GIÁO VIÊN
+  if (currentUser.role === 'TEACHER') {
+    return <TeacherDashboard currentUser={currentUser} />;
+  }
+
+  // 4. MÀN HÌNH CHÍNH DÀNH CHO HỌC SINH
   return (
     <div className="container py-5" style={{ maxWidth: '650px' }}>
       <div className="card border rounded-1 p-4 bg-white text-center">
