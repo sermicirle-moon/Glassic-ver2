@@ -9,7 +9,18 @@ const emptyForm = {
   grade: 'Khối 10',
   maxStudents: 40,
   homeroomTeacherId: '',
-  status: 'Hoạt động'
+  status: 'Hoạt động',
+  startDate: '',
+  endDate: ''
+};
+
+const formatDateForInput = (d) => {
+  if (!d) return '';
+  try {
+    return new Date(d).toISOString().slice(0, 10);
+  } catch (e) {
+    return '';
+  }
 };
 
 // Form thêm / sửa lớp học. Tách riêng để mỗi lần mở là một form mới (không dính lỗi cũ).
@@ -24,7 +35,9 @@ const ClassForm = ({ editingClass, teachers, onCancel, onSaved }) => {
           grade: editingClass.grade,
           maxStudents: editingClass.maxStudents,
           homeroomTeacherId: editingClass.homeroomTeacherId || '',
-          status: editingClass.status
+          status: editingClass.status,
+          startDate: formatDateForInput(editingClass.startDate),
+          endDate: formatDateForInput(editingClass.endDate)
         }
       : emptyForm
   );
@@ -119,7 +132,7 @@ const ClassForm = ({ editingClass, teachers, onCancel, onSaved }) => {
             </select>
           </div>
           {isEditing && (
-            <div className="col-md-3">
+            <div className="col-md-6">
               <label className="form-label small text-secondary mb-1">Trạng thái</label>
               <select
                 name="status"
@@ -133,6 +146,31 @@ const ClassForm = ({ editingClass, teachers, onCancel, onSaved }) => {
               </select>
             </div>
           )}
+
+          <div className="col-md-3">
+            <label className="form-label small text-secondary mb-1">
+              Ngày bắt đầu <span className="text-muted fw-normal">(Tùy chọn)</span>
+            </label>
+            <input
+              type="date"
+              name="startDate"
+              value={formData.startDate}
+              onChange={handleInputChange}
+              className="form-control form-control-sm rounded-1"
+            />
+          </div>
+          <div className="col-md-3">
+            <label className="form-label small text-secondary mb-1">
+              Ngày kết thúc <span className="text-muted fw-normal">(Tùy chọn)</span>
+            </label>
+            <input
+              type="date"
+              name="endDate"
+              value={formData.endDate}
+              onChange={handleInputChange}
+              className="form-control form-control-sm rounded-1"
+            />
+          </div>
         </div>
 
         {errors}
@@ -355,7 +393,15 @@ const ClassManagementView = () => {
               filteredClasses.map((c) => (
                 <tr key={c.classId}>
                   <td className="ps-3 fw-semibold text-dark font-monospace">{c.classId}</td>
-                  <td>{c.className}</td>
+                  <td>
+                    <div className="fw-semibold text-dark">{c.className}</div>
+                    {(c.startDate || c.endDate) && (
+                      <div className="text-secondary small" style={{ fontSize: '11px' }}>
+                        {c.startDate ? new Date(c.startDate).toLocaleDateString('vi-VN') : '...'} →{' '}
+                        {c.endDate ? new Date(c.endDate).toLocaleDateString('vi-VN') : 'Chưa định'}
+                      </div>
+                    )}
+                  </td>
                   <td>
                     <span className="badge text-bg-light border rounded-1 fw-normal text-secondary">
                       {c.grade}

@@ -11,6 +11,7 @@ import { currentUserRouter } from "./routes/auth/current-user.js";
 import { teacherManagementRouter } from "./routes/teacher-management/index.js";
 import { studentManagementRouter } from "./routes/student-management/index.js";
 import { classManagementRouter } from "./routes/class-management/index.js";
+import { scheduleManagementRouter } from "./routes/schedule-management/index.js";
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use(currentUserRouter);
 app.use(teacherManagementRouter);
 app.use(studentManagementRouter);
 app.use(classManagementRouter);
+app.use(scheduleManagementRouter);
 
 app.all('*', async (req, res) => {
     throw new NotFoundError();

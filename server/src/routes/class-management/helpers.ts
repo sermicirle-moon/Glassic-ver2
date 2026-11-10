@@ -54,6 +54,12 @@ export const resolveHomeroomTeacher = async (raw: unknown): Promise<string | nul
     return teacherId;
 };
 
+export const parseDate = (val: unknown): Date | null => {
+    if (!val || typeof val !== "string" || !val.trim()) return null;
+    const d = new Date(val.trim());
+    return isNaN(d.getTime()) ? null : d;
+};
+
 export const classValidators = [
     body("className")
         .trim()

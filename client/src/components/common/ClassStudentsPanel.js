@@ -214,6 +214,12 @@ const ClassStudentsPanel = ({ classInfo, canManage, onClose, onChanged }) => {
           </div>
           <small className="text-secondary">
             Đang học: {activeCount} / {classInfo.maxStudents} | Tổng danh sách: {students.length}
+            {(classInfo.startDate || classInfo.endDate) && (
+              <span className="ms-2">
+                (Thời gian: {classInfo.startDate ? new Date(classInfo.startDate).toLocaleDateString('vi-VN') : '...'} →{' '}
+                {classInfo.endDate ? new Date(classInfo.endDate).toLocaleDateString('vi-VN') : 'Chưa định'})
+              </span>
+            )}
           </small>
         </div>
         <button onClick={onClose} className="btn btn-outline-secondary btn-sm rounded-1 px-3">

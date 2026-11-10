@@ -5,7 +5,7 @@ import { validateRequest, BadRequestError } from "@xen-tickets/common";
 import { ClassStatus } from "@prisma/client";
 import { prisma } from "../../service/prisma.js";
 import { requireAdmin } from "../../middlewares/require-admin.js";
-import { classValidators, classInclude, toClassDto, resolveHomeroomTeacher } from "./helpers.js";
+import { classValidators, classInclude, toClassDto, resolveHomeroomTeacher, parseDate } from "./helpers.js";
 
 const router = express.Router();
 
@@ -35,8 +35,8 @@ router.post("/api/users/classes", [
             maxStudents: Number(maxStudents),
             homeroomTeacherId,
             status: ClassStatus.ACTIVE,
-            startDate: startDate ? new Date(startDate) : null,
-            endDate: endDate ? new Date(endDate) : null
+            startDate: parseDate(startDate),
+            endDate: parseDate(endDate)
         },
         include: classInclude
     });

@@ -5,7 +5,7 @@ import { validateRequest, BadRequestError, NotFoundError } from "@xen-tickets/co
 import { ClassStatus, EnrollmentStatus } from "@prisma/client";
 import { prisma } from "../../service/prisma.js";
 import { requireAdmin } from "../../middlewares/require-admin.js";
-import { classValidators, classInclude, toClassDto, getParam, parseClassStatus, resolveHomeroomTeacher } from "./helpers.js";
+import { classValidators, classInclude, toClassDto, getParam, parseClassStatus, resolveHomeroomTeacher, parseDate } from "./helpers.js";
 
 const router = express.Router();
 
@@ -50,8 +50,8 @@ router.put("/api/users/classes/:classId", [
                     maxStudents: Number(maxStudents),
                     status: ClassStatus.COMPLETED,
                     homeroomTeacherId,
-                    ...(startDate !== undefined ? { startDate: startDate ? new Date(startDate) : null } : {}),
-                    endDate: endDate ? new Date(endDate) : (existing.endDate || new Date())
+                    ...(startDate !== undefined ? { startDate: parseDate(startDate) } : {}),
+                    endDate: endDate !== undefined ? parseDate(endDate) : (existing.endDate || new Date())
                 },
                 include: classInclude
             }),
@@ -75,8 +75,8 @@ router.put("/api/users/classes/:classId", [
                 maxStudents: Number(maxStudents),
                 ...(parsedStatus ? { status: parsedStatus } : {}),
                 homeroomTeacherId,
-                ...(startDate !== undefined ? { startDate: startDate ? new Date(startDate) : null } : {}),
-                ...(endDate !== undefined ? { endDate: endDate ? new Date(endDate) : null } : {})
+                ...(startDate !== undefined ? { startDate: parseDate(startDate) } : {}),
+                ...(endDate !== undefined ? { endDate: parseDate(endDate) } : {})
             },
             include: classInclude
         });
