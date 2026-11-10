@@ -128,6 +128,7 @@ const ClassForm = ({ editingClass, teachers, onCancel, onSaved }) => {
                 className="form-select form-select-sm rounded-1"
               >
                 <option value="Hoạt động">Hoạt động</option>
+                <option value="Đã hoàn thành">Đã hoàn thành</option>
                 <option value="Tạm ngưng">Tạm ngưng</option>
               </select>
             </div>
@@ -215,6 +216,26 @@ const ClassManagementView = () => {
       setActionError('');
       await axios.delete(`/api/users/classes/${c.classId}`);
       if (selectedClassId === c.classId) setSelectedClassId(null);
+      fetchClasses();
+    } catch (err) {
+      setActionError(
+        err.response?.data?.errors?.[0]?.message || 'Có lỗi xảy ra, vui lòng thử lại sau.'
+      );
+    }
+  };
+
+  const handleCompleteClass = async (c) => {
+    if (
+      !window.confirm(
+        `Xác nhận hoàn thành khóa học cho lớp ${c.className} (${c.classId})?\n` +
+          `Tất cả học sinh đang học trong lớp sẽ tự động được chuyển sang trạng thái "Hoàn thành khóa học".`
+      )
+    ) {
+      return;
+    }
+    try {
+      setActionError('');
+      await axios.post(`/api/users/classes/${c.classId}/complete`);
       fetchClasses();
     } catch (err) {
       setActionError(
@@ -353,7 +374,11 @@ const ClassManagementView = () => {
                   <td>
                     <span
                       className={`small fw-semibold ${
-                        c.status === 'Hoạt động' ? 'text-success' : 'text-secondary'
+                        c.status === 'Hoạt động'
+                          ? 'text-success'
+                          : c.status === 'Đã hoàn thành'
+                          ? 'text-primary'
+                          : 'text-secondary'
                       }`}
                     >
                       {c.status}
@@ -375,6 +400,16 @@ const ClassManagementView = () => {
                       >
                         Sửa
                       </button>
+                      {c.status !== 'Đã hoàn thành' && (
+                        <button
+                          onClick={() => handleCompleteClass(c)}
+                          className="btn btn-outline-dark btn-sm rounded-1 py-0 px-2"
+                          style={{ fontSize: '12px' }}
+                          title="Hoàn thành khóa học cho lớp"
+                        >
+                          Hoàn thành
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(c)}
                         className="btn btn-outline-danger btn-sm rounded-1 py-0 px-2"
