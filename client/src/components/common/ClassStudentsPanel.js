@@ -12,9 +12,14 @@ const ClassStudentsPanel = ({ classInfo, canManage, onClose, onChanged }) => {
   const [students, setStudents] = useState([]);
   const [availableStudents, setAvailableStudents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedStudentId, setSelectedStudentId] = useState('');
   const [actionError, setActionError] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
+
+  // Quản lý tìm kiếm & gợi ý học sinh để thêm vào lớp
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
   const fetchStudents = async () => {
     try {
@@ -40,17 +45,51 @@ const ClassStudentsPanel = ({ classInfo, canManage, onClose, onChanged }) => {
   const { doRequest, errors, loading: assigning } = useRequest({
     url: `/api/users/classes/${classInfo.classId}/students`,
     method: 'post',
-    body: { studentId: selectedStudentId },
+    body: { studentId: selectedStudent?.studentId },
     onSuccess: () => {
-      setSelectedStudentId('');
+      setSelectedStudent(null);
+      setSearchKeyword('');
+      setSearchResults([]);
+      setHasSearched(false);
       fetchStudents();
       if (onChanged) onChanged();
     }
   });
 
+  const handleSearchStudents = (e) => {
+    if (e) e.preventDefault();
+    const term = searchKeyword.trim().toLowerCase();
+    if (!term) {
+      setSearchResults([]);
+      setHasSearched(false);
+      return;
+    }
+
+    const results = availableStudents.filter((s) => {
+      const name = (s.studentName || '').toLowerCase();
+      const id = (s.studentId || '').toLowerCase();
+      const email = (s.email || '').toLowerCase();
+      const phone = s.phoneNumber || '';
+      return name.includes(term) || id.includes(term) || email.includes(term) || phone.includes(term);
+    });
+
+    setSearchResults(results);
+    setHasSearched(true);
+  };
+
+  const handleSelectStudent = (student) => {
+    setSelectedStudent(student);
+    setSearchResults([]);
+    setHasSearched(false);
+  };
+
+  const handleClearSelected = () => {
+    setSelectedStudent(null);
+  };
+
   const handleAssign = async (e) => {
-    e.preventDefault();
-    if (!selectedStudentId) return;
+    if (e) e.preventDefault();
+    if (!selectedStudent) return;
     await doRequest();
   };
 
@@ -183,41 +222,136 @@ const ClassStudentsPanel = ({ classInfo, canManage, onClose, onChanged }) => {
       </div>
 
       <div className="p-3 d-flex flex-column gap-3">
+        {/* Khu vực Tìm kiếm & Gợi ý học sinh để thêm vào lớp */}
         {canManage && classInfo.status !== 'Đã hoàn thành' && (
-          <form onSubmit={handleAssign}>
-            <label className="form-label small text-secondary mb-1">
-              Xếp học sinh mới hoặc học sinh chuyển lớp vào lớp này
-            </label>
-            <div className="d-flex gap-2">
-              <select
-                className="form-select form-select-sm rounded-1"
-                value={selectedStudentId}
-                onChange={(e) => setSelectedStudentId(e.target.value)}
-              >
-                <option value="">-- Chọn học sinh --</option>
-                {availableStudents.map((s) => (
-                  <option key={s.studentId} value={s.studentId}>
-                    {s.studentName} ({s.studentId})
-                    {s.lastStatus === 'TRANSFERRED'
-                      ? ` [Chuyển từ lớp ${s.lastClassId}]`
-                      : s.lastStatus === 'DROPPED'
-                      ? ` [Thôi học từ lớp ${s.lastClassId}]`
-                      : s.lastStatus === 'COMPLETED'
-                      ? ` [Đã hoàn thành lớp ${s.lastClassId}]`
-                      : ''}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                disabled={!selectedStudentId || assigning}
-                className="btn btn-dark btn-sm rounded-1 px-3 text-nowrap"
-              >
-                {assigning ? 'Đang thêm...' : 'Thêm vào lớp'}
-              </button>
+          <div className="card border rounded-1 p-3 bg-light">
+            <div className="fw-semibold small text-dark mb-2">
+              Tìm kiếm và thêm học sinh vào lớp này
             </div>
+
+            <form onSubmit={handleSearchStudents} className="mb-2">
+              <div className="d-flex gap-2">
+                <input
+                  type="text"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  placeholder="Nhập mã học sinh hoặc tên (nhấn Enter hoặc bấm Tìm)..."
+                  className="form-control form-control-sm rounded-1"
+                />
+                <button
+                  type="submit"
+                  disabled={!searchKeyword.trim()}
+                  className="btn btn-outline-dark btn-sm rounded-1 px-3 text-nowrap"
+                >
+                  Tìm
+                </button>
+              </div>
+            </form>
+
+            {/* Danh sách gợi ý xổ xuống khi ấn tìm/enter */}
+            {hasSearched && (
+              <div
+                className="border rounded-1 bg-white mb-2 overflow-hidden"
+                style={{ maxHeight: '220px', overflowY: 'auto' }}
+              >
+                {searchResults.length === 0 ? (
+                  <div className="p-3 text-center text-muted small">
+                    Không tìm thấy học sinh phù hợp (hoặc học sinh đã thuộc lớp khác).
+                  </div>
+                ) : (
+                  <div className="list-group list-group-flush">
+                    {searchResults.map((s) => (
+                      <button
+                        key={s.studentId}
+                        type="button"
+                        onClick={() => handleSelectStudent(s)}
+                        className="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-0 border-bottom text-start"
+                        style={{ fontSize: '13px' }}
+                      >
+                        <div>
+                          <span className="fw-semibold text-dark font-monospace me-2">
+                            {s.studentId}
+                          </span>
+                          <span className="text-dark fw-semibold me-2">{s.studentName}</span>
+                          <span className="text-secondary small">
+                            ({s.gender || 'Nam'} - {s.phoneNumber || s.email})
+                          </span>
+                        </div>
+                        <div className="d-flex align-items-center gap-2">
+                          {s.lastStatus === 'TRANSFERRED' ? (
+                            <span className="badge text-bg-light border text-secondary rounded-1 fw-normal">
+                              Chuyển từ lớp {s.lastClassId}
+                            </span>
+                          ) : s.lastStatus === 'DROPPED' ? (
+                            <span className="badge text-bg-light border text-danger rounded-1 fw-normal">
+                              Thôi học từ lớp {s.lastClassId}
+                            </span>
+                          ) : s.lastStatus === 'COMPLETED' ? (
+                            <span className="badge text-bg-light border text-primary rounded-1 fw-normal">
+                              Đã hoàn thành lớp {s.lastClassId}
+                            </span>
+                          ) : (
+                            <span className="badge text-bg-light border text-success rounded-1 fw-normal">
+                              Học sinh mới
+                            </span>
+                          )}
+                          <span
+                            className="btn btn-outline-dark btn-sm py-0 px-2 rounded-1"
+                            style={{ fontSize: '11px' }}
+                          >
+                            Chọn
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Học sinh đã chọn và nút xác nhận thêm */}
+            {selectedStudent ? (
+              <div className="d-flex justify-content-between align-items-center p-2 border rounded-1 bg-white">
+                <div className="small">
+                  <span className="text-secondary me-1">Đã chọn:</span>
+                  <strong className="text-dark me-2">{selectedStudent.studentName}</strong>
+                  <code className="text-dark bg-light px-1 border rounded-1 me-2">
+                    {selectedStudent.studentId}
+                  </code>
+                  {selectedStudent.lastStatus === 'TRANSFERRED' && (
+                    <span className="badge text-bg-light border text-secondary rounded-1 fw-normal">
+                      Chuyển từ lớp {selectedStudent.lastClassId}
+                    </span>
+                  )}
+                </div>
+                <div className="d-flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleClearSelected}
+                    className="btn btn-outline-secondary btn-sm rounded-1 py-1 px-2"
+                    style={{ fontSize: '12px' }}
+                  >
+                    Bỏ chọn
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAssign}
+                    disabled={assigning}
+                    className="btn btn-dark btn-sm rounded-1 py-1 px-3 fw-semibold"
+                    style={{ fontSize: '12px' }}
+                  >
+                    {assigning ? 'Đang thêm...' : 'Xác nhận thêm vào lớp'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="small text-secondary fst-italic">
+                Gõ tìm kiếm, nhấn Enter hoặc bấm "Tìm" để chọn học sinh từ danh sách gợi ý.
+              </div>
+            )}
+
             {errors}
-          </form>
+          </div>
         )}
 
         {actionError && (
@@ -344,7 +478,10 @@ const ClassStudentsPanel = ({ classInfo, canManage, onClose, onChanged }) => {
                             </button>
                           </div>
                         ) : (
-                          <span className="small text-muted fst-italic" style={{ fontSize: '11px' }}>
+                          <span
+                            className="small text-muted fst-italic"
+                            style={{ fontSize: '11px' }}
+                          >
                             Đã lưu lịch sử
                           </span>
                         )}
