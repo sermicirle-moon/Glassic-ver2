@@ -3,6 +3,7 @@ import React from 'react';
 const AdminSidebar = ({ activeTab, setActiveTab }) => {
   const menuItems = [
     { id: 'classes', label: 'Lớp học' },
+    { id: 'schedules', label: 'Lịch học' },
     { id: 'teachers', label: 'Giáo viên' },
     { id: 'students', label: 'Học sinh' },
     { id: 'overview', label: 'Tổng quan' }
