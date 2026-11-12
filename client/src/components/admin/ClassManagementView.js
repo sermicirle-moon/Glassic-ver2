@@ -9,7 +9,18 @@ const emptyForm = {
   grade: 'Khối 10',
   maxStudents: 40,
   homeroomTeacherId: '',
-  status: 'Hoạt động'
+  status: 'Hoạt động',
+  startDate: '',
+  endDate: ''
+};
+
+const formatDateForInput = (d) => {
+  if (!d) return '';
+  try {
+    return new Date(d).toISOString().slice(0, 10);
+  } catch (e) {
+    return '';
+  }
 };
 
 // Form thêm / sửa lớp học. Tách riêng để mỗi lần mở là một form mới (không dính lỗi cũ).
@@ -24,7 +35,9 @@ const ClassForm = ({ editingClass, teachers, onCancel, onSaved }) => {
           grade: editingClass.grade,
           maxStudents: editingClass.maxStudents,
           homeroomTeacherId: editingClass.homeroomTeacherId || '',
-          status: editingClass.status
+          status: editingClass.status,
+          startDate: formatDateForInput(editingClass.startDate),
+          endDate: formatDateForInput(editingClass.endDate)
         }
       : emptyForm
   );
@@ -119,7 +132,7 @@ const ClassForm = ({ editingClass, teachers, onCancel, onSaved }) => {
             </select>
           </div>
           {isEditing && (
-            <div className="col-md-3">
+            <div className="col-md-6">
               <label className="form-label small text-secondary mb-1">Trạng thái</label>
               <select
                 name="status"
@@ -128,10 +141,36 @@ const ClassForm = ({ editingClass, teachers, onCancel, onSaved }) => {
                 className="form-select form-select-sm rounded-1"
               >
                 <option value="Hoạt động">Hoạt động</option>
+                <option value="Đã hoàn thành">Đã hoàn thành</option>
                 <option value="Tạm ngưng">Tạm ngưng</option>
               </select>
             </div>
           )}
+
+          <div className="col-md-3">
+            <label className="form-label small text-secondary mb-1">
+              Ngày bắt đầu <span className="text-muted fw-normal">(Tùy chọn)</span>
+            </label>
+            <input
+              type="date"
+              name="startDate"
+              value={formData.startDate}
+              onChange={handleInputChange}
+              className="form-control form-control-sm rounded-1"
+            />
+          </div>
+          <div className="col-md-3">
+            <label className="form-label small text-secondary mb-1">
+              Ngày kết thúc <span className="text-muted fw-normal">(Tùy chọn)</span>
+            </label>
+            <input
+              type="date"
+              name="endDate"
+              value={formData.endDate}
+              onChange={handleInputChange}
+              className="form-control form-control-sm rounded-1"
+            />
+          </div>
         </div>
 
         {errors}
@@ -215,6 +254,26 @@ const ClassManagementView = () => {
       setActionError('');
       await axios.delete(`/api/users/classes/${c.classId}`);
       if (selectedClassId === c.classId) setSelectedClassId(null);
+      fetchClasses();
+    } catch (err) {
+      setActionError(
+        err.response?.data?.errors?.[0]?.message || 'Có lỗi xảy ra, vui lòng thử lại sau.'
+      );
+    }
+  };
+
+  const handleCompleteClass = async (c) => {
+    if (
+      !window.confirm(
+        `Xác nhận hoàn thành khóa học cho lớp ${c.className} (${c.classId})?\n` +
+          `Tất cả học sinh đang học trong lớp sẽ tự động được chuyển sang trạng thái "Hoàn thành khóa học".`
+      )
+    ) {
+      return;
+    }
+    try {
+      setActionError('');
+      await axios.post(`/api/users/classes/${c.classId}/complete`);
       fetchClasses();
     } catch (err) {
       setActionError(
@@ -334,7 +393,15 @@ const ClassManagementView = () => {
               filteredClasses.map((c) => (
                 <tr key={c.classId}>
                   <td className="ps-3 fw-semibold text-dark font-monospace">{c.classId}</td>
-                  <td>{c.className}</td>
+                  <td>
+                    <div className="fw-semibold text-dark">{c.className}</div>
+                    {(c.startDate || c.endDate) && (
+                      <div className="text-secondary small" style={{ fontSize: '11px' }}>
+                        {c.startDate ? new Date(c.startDate).toLocaleDateString('vi-VN') : '...'} →{' '}
+                        {c.endDate ? new Date(c.endDate).toLocaleDateString('vi-VN') : 'Chưa định'}
+                      </div>
+                    )}
+                  </td>
                   <td>
                     <span className="badge text-bg-light border rounded-1 fw-normal text-secondary">
                       {c.grade}
@@ -353,7 +420,11 @@ const ClassManagementView = () => {
                   <td>
                     <span
                       className={`small fw-semibold ${
-                        c.status === 'Hoạt động' ? 'text-success' : 'text-secondary'
+                        c.status === 'Hoạt động'
+                          ? 'text-success'
+                          : c.status === 'Đã hoàn thành'
+                          ? 'text-primary'
+                          : 'text-secondary'
                       }`}
                     >
                       {c.status}
@@ -375,6 +446,16 @@ const ClassManagementView = () => {
                       >
                         Sửa
                       </button>
+                      {c.status !== 'Đã hoàn thành' && (
+                        <button
+                          onClick={() => handleCompleteClass(c)}
+                          className="btn btn-outline-dark btn-sm rounded-1 py-0 px-2"
+                          style={{ fontSize: '12px' }}
+                          title="Hoàn thành khóa học cho lớp"
+                        >
+                          Hoàn thành
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(c)}
                         className="btn btn-outline-danger btn-sm rounded-1 py-0 px-2"

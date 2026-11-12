@@ -7,13 +7,42 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ================= ENUMS =================
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum ClassStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  TRANSFERRED
+  COMPLETED
+  DROPPED
+}
+
+enum AttendanceState {
+  PRESENT
+  ABSENT
+  EXCUSED
+}
+
+// ================= MODELS =================
+
 model User {
   id        Int      @id @default(autoincrement())
   userId    String   @unique 
   username  String  
   password  String
-  role      String   @default("STUDENT")
+  role      Role     @default(STUDENT)
   createdAt DateTime @default(now())
+  
   teacher   Teacher?
   student   Student?
 }
@@ -26,33 +55,84 @@ model Teacher {
   email           String
   gender          String
   address         String
+  
   userId          String   @unique
   user            User     @relation(fields: [userId], references: [userId])
-  homeroomClasses Class[]
+  
+  homeroomClasses Class[]  
 }
 
 model Student {
-  studentId   String   @id 
-  studentName String
-  dateOfBirth String
-  phoneNumber String
-  email       String
-  gender      String
-  address     String
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [userId])
-  classId     String?
-  class       Class?   @relation(fields: [classId], references: [classId])
+  studentId       String   @id 
+  studentName     String
+  dateOfBirth     String
+  phoneNumber     String
+  email           String
+  gender          String
+  address         String
+  
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [userId])
+
+  enrollments     Student_Class[]
+  
+  attendance      AttendanceRecord[]
 }
 
 model Class {
-  classId           String    @id
+  classId           String      @id
   className         String
   grade             String
-  maxStudents       Int       @default(40)
-  status            String    @default("Hoạt động")
-  createdAt         DateTime  @default(now())
+  maxStudents       Int         @default(40)
+  status            ClassStatus @default(ACTIVE)
+  startDate         DateTime?
+  endDate           DateTime?
+  createdAt         DateTime    @default(now())
+  
   homeroomTeacherId String?
-  homeroomTeacher   Teacher?  @relation(fields: [homeroomTeacherId], references: [teacherId])
-  students          Student[]
+  homeroomTeacher   Teacher?    @relation(fields: [homeroomTeacherId], references: [teacherId])
+  
+  enrollments       Student_Class[]
+
+  schedules         Schedule[]
+}
+
+model Student_Class {
+  id          Int              @id @default(autoincrement())
+  studentId   String
+  classId     String
+  joinDate    DateTime         @default(now())
+  status      EnrollmentStatus @default(ACTIVE)
+  
+  student     Student          @relation(fields: [studentId], references: [studentId])
+  class       Class            @relation(fields: [classId], references: [classId])
+
+  @@unique([studentId, classId])
+}
+
+model Schedule {
+  scheduleId   Int      @id @default(autoincrement())
+  classId      String
+  lessonTopic  String?  
+  room         String?
+  startTime    DateTime
+  endTime      DateTime
+  
+  class        Class    @relation(fields: [classId], references: [classId])
+  
+  attendances  AttendanceRecord[]
+}
+
+model AttendanceRecord {
+  id           Int             @id @default(autoincrement())
+  scheduleId   Int
+  studentId    String
+  status       AttendanceState @default(PRESENT)
+  notes        String?
+  recordedAt   DateTime        @default(now())
+  
+  schedule     Schedule        @relation(fields: [scheduleId], references: [scheduleId])
+  student      Student         @relation(fields: [studentId], references: [studentId])
+
+  @@unique([scheduleId, studentId])
 }
