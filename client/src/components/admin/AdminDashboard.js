@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import AdminSidebar from './AdminSidebar';
 import ClassManagementView from './ClassManagementView';
+import ScheduleManagementView from './ScheduleManagementView';
 import TeacherManagementView from './TeacherManagementView';
 import StudentManagementView from './StudentManagementView';
 import OverviewView from './OverviewView';
@@ -25,6 +26,8 @@ const AdminDashboard = ({ currentUser }) => {
     switch (activeTab) {
       case 'classes':
         return <ClassManagementView />;
+      case 'schedules':
+        return <ScheduleManagementView />;
       case 'teachers':
         return <TeacherManagementView />;
       case 'students':

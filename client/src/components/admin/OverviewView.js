@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const OverviewView = ({ currentUser, setActiveTab }) => {
   const [stats, setStats] = useState({
-    classesCount: 6,
+    classesCount: 0,
     teachersCount: 0,
     studentsCount: 0
   });
@@ -11,13 +11,15 @@ const OverviewView = ({ currentUser, setActiveTab }) => {
   useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const [teachersRes, studentsRes] = await Promise.allSettled([
+        const [classesRes, teachersRes, studentsRes] = await Promise.allSettled([
+          axios.get('/api/users/classes'),
           axios.get('/api/users/teachers'),
           axios.get('/api/users/students')
         ]);
 
         setStats((prev) => ({
           ...prev,
+          classesCount: classesRes.status === 'fulfilled' ? classesRes.value.data.length : 0,
           teachersCount: teachersRes.status === 'fulfilled' ? teachersRes.value.data.length : 0,
           studentsCount: studentsRes.status === 'fulfilled' ? studentsRes.value.data.length : 0
         }));
