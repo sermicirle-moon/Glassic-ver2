@@ -8,6 +8,9 @@ export default ({ currentUser }) => {
     currentUser && currentUser.role === 'ADMIN' && { label: 'Giáo viên', href: '/?tab=teachers' },
     currentUser && currentUser.role === 'ADMIN' && { label: 'Học sinh', href: '/?tab=students' },
     currentUser && currentUser.role === 'TEACHER' && { label: 'Lớp của tôi', href: '/' },
+    currentUser && currentUser.role === 'STUDENT' && { label: 'Thời khóa biểu', href: '/?tab=schedule' },
+    currentUser && currentUser.role === 'STUDENT' && { label: 'Lớp học', href: '/?tab=my-class' },
+    currentUser && currentUser.role === 'STUDENT' && { label: 'Điểm danh', href: '/?tab=attendance' },
     currentUser && { label: 'Đăng xuất', href: '/auth/signout' },
   ]
     .filter((linkConfig) => linkConfig)

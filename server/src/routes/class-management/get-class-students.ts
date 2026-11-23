@@ -24,7 +24,19 @@ router.get("/api/users/classes/:classId/students", async (req: Request, res: Res
 
     const role = user.role?.toUpperCase();
     const isHomeroomTeacher = role === "TEACHER" && cls.homeroomTeacher?.userId === user.userId;
-    if (role !== "ADMIN" && !isHomeroomTeacher) {
+    let isEnrolledStudent = false;
+    if (role === "STUDENT") {
+        const studentEnrollment = await prisma.student_Class.findFirst({
+            where: {
+                classId,
+                student: { userId: user.userId },
+                status: EnrollmentStatus.ACTIVE
+            }
+        });
+        isEnrolledStudent = !!studentEnrollment;
+    }
+
+    if (role !== "ADMIN" && !isHomeroomTeacher && !isEnrolledStudent) {
         throw new NotAuthorizedError();
     }
 

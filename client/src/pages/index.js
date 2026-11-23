@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import TeacherDashboard from '../components/teacher/TeacherDashboard';
+import StudentDashboard from '../components/student/StudentDashboard';
 
 const LandingPage = ({ currentUser }) => {
   // 1. Trường hợp CHƯA ĐĂNG NHẬP
@@ -63,6 +64,10 @@ const LandingPage = ({ currentUser }) => {
   }
 
   // 4. MÀN HÌNH CHÍNH DÀNH CHO HỌC SINH
+  if (currentUser.role === 'STUDENT') {
+    return <StudentDashboard currentUser={currentUser} />;
+  }
+
   return (
     <div className="container py-5" style={{ maxWidth: '650px' }}>
       <div className="card border rounded-1 p-4 bg-white text-center">

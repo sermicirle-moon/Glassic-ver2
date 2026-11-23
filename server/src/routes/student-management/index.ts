@@ -5,9 +5,11 @@ import { requireAdmin } from "../../middlewares/require-admin.js";
 import { NotFoundError } from "@xen-tickets/common";
 import { getStudentsRouter } from "./get-students.js";
 import { createStudentRouter } from "./create-student.js";
+import { getStudentProfileRouter } from "./get-my-student-profile.js";
 
 const router = express.Router();
 
+router.use(getStudentProfileRouter);
 router.use(getStudentsRouter);
 router.use(createStudentRouter);
 

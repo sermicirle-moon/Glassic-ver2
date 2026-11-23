@@ -19,11 +19,13 @@ router.get("/api/users/students", requireAdmin, async (req: Request, res: Respon
     });
 
     const result = students.map((s) => {
-        const activeEnrollment = s.enrollments.find((e) => e.status === EnrollmentStatus.ACTIVE);
+        const activeEnrollments = s.enrollments.filter((e) => e.status === EnrollmentStatus.ACTIVE);
+        const activeClassIds = activeEnrollments.map((e) => e.classId);
         const lastEnrollment = s.enrollments[0];
         return {
             ...s,
-            classId: activeEnrollment?.classId ?? null,
+            classId: activeClassIds[0] ?? null,
+            classIds: activeClassIds,
             lastClassId: lastEnrollment?.classId ?? null,
             lastStatus: lastEnrollment?.status ?? null
         };
